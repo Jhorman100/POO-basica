@@ -32,52 +32,137 @@ def list_tickets(db :DBType) -> None:
         raise ValueError ("gulloso no tiene tickets")
     return list (tickets.values())
 
+def format_usuario(usuario: dict) -> str:
+    return f"{usuario['id']: 3d} | {usuario['nombre']:<20s} | {usuario['email']:<30s} | {usuario['telefono']}"
 
+def format_ticket(ticket: dict) -> str:
+    return f"{ticket['id']: 3d} | {ticket['titulo']:<30s} | {ticket['estado']:<12s} | {ticket['prioridad']}"
 
+def input_format(prompt: str, validator: Callable[[str], bool], error_msg: str, input_func: callable) -> str:
+    value = input_func(prompt).strip()
+    if validator(value):
+        return value
+    else:
+        print(f"\nError: {error_msg}")
+        return None
 
-
-
-
-def run(db: DBType, input_func: InputFn = input, printer = print) -> None:
-    emit(format_title("Taller POO basica - Menu"), printer)
+def run(db: DBType, input_func: InputFn = input, printer=print) -> None:
+    emit(format_title("Taller POO básica - Menú"), printer)
     while True:
         emit(MENU.strip(), printer)
-        try:
-           opcion = input_func("opcion: ").strip()
-        if opcion == 0:
+        opcion = input_format(
+            "Opción: ",
+            lambda x: x.isdigit(),
+            "Debes ingresar un número del menú",
+            input_func
+        ).strip()
+        if opcion == "0":
             emit("Hasta luego.", printer)
             break
-        try:
-            handle_option(opcion, db, input_func, printer)
-        except Exception as ex:
-            emit(format_error(str(ex)), printer)
+        handle_option(opcion, db, input_func, printer)
 
 def handle_option(opcion: str, db: DBType, input_func: InputFn, printer=print) -> None:
     if opcion == "1":
         usuarios = list_usuarios(db)
-        headers = ["id", "nombre", "email", "telefono"]
-        rows = [(u.id, u.nombre, u.email, u.telefono or "") for u in usuarios]
-        emit(format_table(headers, rows), printer)
-
+        if not usuarios:
+            ("No hay usuarios registrados", printer)
+            return
+        emit("\nUsuarios registrados:", printer)
+        emit("ID  | Nombre               | Email                          | Teléfono", printer)
+        emit("-" * 75, printer)
+        for u in usuarios:
+            emit(format_usuario(u), printer)
+       
     elif opcion == "2":
-        id_ = int(input_func("id: "))
-        nombre = input_func("nombre: ")
-        email = input_func("email: ")
-        telefono = input_func("telefono (opcional): ").strip() or None
-        us = add_usuario(db, id_, nombre, email, telefono)
-        emit(format_success(f"Usuario creado: {us}"), printer)
+        try:
+            nombre = input_format(
+                "Nombre: ",
+                lambda x: len(x.strip()) >= 2,
+                "El nombre debe tener al menos 2 caracteres",
+                input_func
+            )
+            
+            email = input_format(
+                "Email: ",
+                lambda x: "@" in x and "." in x,
+                "El email debe ser válido (ejemplo: jhorman@gmail.com)",
+                input_func
+            )
+
+            telefono = input_func("Teléfono (opcional): ").strip()
+            if telefono:
+                if len("".join(c for c in telefono if c.isdigit())) < 7:
+                    telefono = input_format(
+                        "Teléfono (debe tener al menos 7 dígitos): ",
+                        lambda x: len("".join(c for c in x if c.isdigit())) >= 7,
+                        "El teléfono debe tener al menos 7 dígitos",
+                        input_func
+                    )
+            else:
+                telefono = None
+            
+            id = len(db["usuarios"]) + 1
+            usuario = {
+                "id": id,
+                "nombre": nombre,
+                "email": email,
+                "telefono": telefono
+            }
+            db["usuarios"][id] = usuario
+            emit("Usuario creado exitosamente", printer)
+        except ValueError as e:
+            raise ValueError(f"Error al crear usuario: {str(e)}")       
 
     elif opcion == "3":
         tickets = list_tickets(db)
-        headers = ["id", "usuario_id", "titulo", "prioridad", "estado"]
-        rows = [(t.id, t.usuario_id, t.titulo, t.prioridad, t.estado) for t in tickets]
-        emit(format_table(headers, rows), printer)
+        if not tickets:
+            emit("No hay tickets registrados", printer)
+            return
+        emit("\nTickets registrados:", printer)
+        emit("ID  | Titulo               | Estado                          | Prioridad", printer)
+        emit("-" * 65, printer)
+        for t in tickets:
+            emit(format_ticket(t), printer)
+
+        
 
     elif opcion == "4":
-        id_ = int(input_func("id: "))
-        usuario_id = int(input_func("usuario_id: "))
-        titulo = input_func("titulo: ")
-        prioridad = input_func("prioridad: ")
-        estado = input_func("estado: ")
-        tick = add_ticket(db, id_, usuario_id, prioridad, estado)
-        emit(format_success(f"Ticket creado: {tick}"), printer)
+        try:
+            titulo = input_format(
+                "Titulo: ",
+                lambda x: len(x.strip()) >= 5,
+                "El titulo debe tener al menos 5 caracteres",
+                input_format
+            )
+
+            descripcion = input_format(
+                "Descripcion: ",
+                lambda x: len(x.strip()) >= 10,
+                "La descripcion debe tener al menos 10 caracteres",
+                input_format
+            )
+
+            prioridad = input_format(
+                "Prioridad (alta/media/baja): ",
+                lambda x: x.lower() in {"alta", "media", "baja"},
+                "La prioridad debe ser alta, media o baja",
+                input_format
+            ).lower()
+
+            id = len(db ["tickets"]) + 1
+            ticket = {
+                "id": id,
+                "titulo": titulo,
+                "prioridad": prioridad,
+                "estado": "abierto"
+            }
+
+            db["tickets"][id] = ticket
+            emit("se ha creado un ticket exitosamente", printer)
+        except ValueError as e:
+            raise ValueError(f"Error al crear el ticket: {str(e)}")
+
+
+        
+
+    
