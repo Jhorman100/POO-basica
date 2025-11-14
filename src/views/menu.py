@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Callable, Dict
 
-
 InputFn = Callable[[str], str]
 DBType = Dict[str, list]
 
@@ -14,23 +13,24 @@ MENU = """
 [6] Listar tickets por estado
 [0] Salir
 """
-def emit (msg: str, printer = print) -> None:
+
+def emit(msg: str, printer=print) -> None:
     printer(msg)
 
-def format_title (title: str) -> str:
-    return f"\n{title} \n {'-' * len (title)}"
+def format_title(title: str) -> str:
+    return f"\n{title} \n {'-' * len(title)}"
 
 def list_usuarios(db: DBType) -> None:
-    usuarios = db ["usuarios"]
+    usuarios = db["usuarios"]
     if not usuarios:
-        raise ValueError ("no hay gullosos registrados")
-    return list (usuarios.values())
+        raise ValueError("no hay usuario registrados")
+    return list(usuarios.values())
 
-def list_tickets(db :DBType) -> None:
-    tickets = db ["tickets"]
+def list_tickets(db: DBType) -> None:
+    tickets = db["tickets"]
     if not tickets:
-        raise ValueError ("gulloso no tiene tickets")
-    return list (tickets.values())
+        raise ValueError("usuario no tiene tickets")
+    return list(tickets.values())
 
 def format_usuario(usuario: dict) -> str:
     return f"{usuario['id']: 3d} | {usuario['nombre']:<20s} | {usuario['email']:<30s} | {usuario['telefono']}"
@@ -72,7 +72,7 @@ def handle_option(opcion: str, db: DBType, input_func: InputFn, printer=print) -
         emit("-" * 75, printer)
         for u in usuarios:
             emit(format_usuario(u), printer)
-       
+
     elif opcion == "2":
         try:
             nombre = input_format(
@@ -111,20 +111,18 @@ def handle_option(opcion: str, db: DBType, input_func: InputFn, printer=print) -
             db["usuarios"][id] = usuario
             emit("Usuario creado exitosamente", printer)
         except ValueError as e:
-            raise ValueError(f"Error al crear usuario: {str(e)}")       
+            raise ValueError(f"Error al crear usuario: {str(e)}")
 
     elif opcion == "3":
         tickets = list_tickets(db)
         if not tickets:
             emit("No hay tickets registrados", printer)
             return
-        emit("\nTickets registrados:", printer)
+        emit("\nTiTickets registrados:", printer)
         emit("ID  | Titulo               | Estado                          | Prioridad", printer)
         emit("-" * 65, printer)
         for t in tickets:
             emit(format_ticket(t), printer)
-
-        
 
     elif opcion == "4":
         try:
@@ -132,24 +130,24 @@ def handle_option(opcion: str, db: DBType, input_func: InputFn, printer=print) -
                 "Titulo: ",
                 lambda x: len(x.strip()) >= 5,
                 "El titulo debe tener al menos 5 caracteres",
-                input_format
+                input_func
             )
 
             descripcion = input_format(
                 "Descripcion: ",
                 lambda x: len(x.strip()) >= 10,
                 "La descripcion debe tener al menos 10 caracteres",
-                input_format
+                input_func
             )
 
             prioridad = input_format(
                 "Prioridad (alta/media/baja): ",
                 lambda x: x.lower() in {"alta", "media", "baja"},
                 "La prioridad debe ser alta, media o baja",
-                input_format
+                input_func
             ).lower()
 
-            id = len(db ["tickets"]) + 1
+            id = len(db["tickets"]) + 1
             ticket = {
                 "id": id,
                 "titulo": titulo,
@@ -162,7 +160,51 @@ def handle_option(opcion: str, db: DBType, input_func: InputFn, printer=print) -
         except ValueError as e:
             raise ValueError(f"Error al crear el ticket: {str(e)}")
 
+    elif opcion == "5":
+        try:
+            id_str = input_format(
+                "ID del ticket: ",
+                lambda x: x.isdigit() and int(x) in db["tickets"],
+                "ID del ticket no es valido",
+                input_func
+            )
+            id = int(id_str)
+            
+            nuevo_estado = input_format(
+                "Nuevo estado (abierto / en progreso / cerrado): ",
+                lambda x: x.lower() in {"abierto", "en progreso", "cerrado"},
+                "El estado debe ser abierto, en progreso o cerrado",
+                input_func
+            ).lower()
+            
+            db["tickets"][id]["estado"] = nuevo_estado
+            emit("Estado actualizado exitosamente", printer)
+        except ValueError as e:
+            raise ValueError(f"Error al actualizar estado: {str(e)}")
 
+    elif opcion == "6":
+        estado = input_format(
+            "Estado a filtrar (abierto / en progreso / cerrado): ",
+            lambda x: x.lower() in {"abierto", "en progreso", "cerrado"},
+            "Estado debe ser abierto, en progreso o cerrado",
+            input_func
+        ).lower()
         
+        tickets = [t for t in db["tickets"].values() if t["estado"] == estado]
+        if not tickets:
+            emit(f"No hay tickets en estado '{estado}'", printer)
+            return
+        
+        emit(f"\nTickets en estado '{estado}':", printer)
+        emit("ID  | Título                         | Estado       | Prioridad", printer)
+        emit("-" * 65, printer)
+        for t in tickets:
+            emit(format_ticket(t), printer)
+
+    else:
+        raise ValueError(f"Opción inválida: {opcion}")
+        
+        
+      
 
     

@@ -105,4 +105,3 @@ class Ticket:
         print("El estado se actualizo correctamente")
     
 
-    # este es el nuevo
