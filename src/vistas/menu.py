@@ -23,7 +23,7 @@ def format_title(title: str) -> str:
 def list_usuarios(db: DBType) -> None:
     usuarios = db["usuarios"]
     if not usuarios:
-        raise ValueError("no hay usuario registrados")
+        raise ValueError("no hay usuarios registrados")
     return list(usuarios.values())
 
 def list_tickets(db: DBType) -> None:

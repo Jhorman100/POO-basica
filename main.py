@@ -1,4 +1,4 @@
-from src.views.menu import run
+from src.vistas.menu import run
 
 def main():
     db = {
